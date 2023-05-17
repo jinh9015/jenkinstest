@@ -2,7 +2,7 @@ version: '3'
 services:
 
   test:
-    image: jinh9015/jenkinstest
+          image: jinh9015/jenkinstest:latest
     container_name: jenkinstest
     ports:
     - "1020:8000"

@@ -40,9 +40,9 @@ pipeline {
                                 def var = entry.key
                                 def dockerUserId = "jinh9015"
                                 def dockerUserPassword = "jcha1855()"
-                                sh "docker tag spaceship_pipeline_${var.toLowerCase()}:latest ${dockerUserId}/spaceship_pipeline_${var.toLowerCase()}:${BUILD_NUMBER}"
+                                sh "docker tag ${var.toLowerCase()}:latest ${dockerUserId}/spaceship_pipeline_${var.toLowerCase()}:${BUILD_NUMBER}"
                                 sh "docker login -u ${dockerUserId} -p ${dockerUserPassword}"
-                                sh "docker push ${dockerUserId}/spaceship_pipeline_${var.toLowerCase()}:${BUILD_NUMBER}"
+                                sh "docker push ${dockerUserId}/${var.toLowerCase()}:${BUILD_NUMBER}"
                             }
                         }
                     }

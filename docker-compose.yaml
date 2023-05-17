@@ -2,12 +2,11 @@ version: '3'
 services:
 
   test:
-    image: rosehs00/jenkinstest
+    image: jinh9015/jenkinstest
     container_name: jenkinstest
     ports:
     - "1020:8000"
     restart: always
     build: .
 
-docker compose up -d --build
 

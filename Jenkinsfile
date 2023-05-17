@@ -1,4 +1,3 @@
-
 def component = [
     Preprocess: false,
     Hyper: false,
@@ -39,15 +38,11 @@ pipeline {
                         stage("${entry.key} Push") {
                             if (entry.value) {
                                 def var = entry.key
-                                withCredentials([usernamePassword(
-                                    credentialsId: 'jinh9015',
-                                    usernameVariable: 'DOCKER_USER_ID',
-                                    passwordVariable: 'DOCKER_USER_PASSWORD'
-                                )]) {
-                                    sh "docker tag spaceship_pipeline_${var.toLowerCase()}:latest ${DOCKER_USER_ID}/spaceship_pipeline_${var.toLowerCase()}:${BUILD_NUMBER}"
-                                    sh "docker login -u ${DOCKER_USER_ID} -p ${DOCKER_USER_PASSWORD}"
-                                    sh "docker push ${DOCKER_USER_ID}/spaceship_pipeline_${var.toLowerCase()}:${BUILD_NUMBER}"
-                                }
+                                def dockerUserId = "jinh9015"
+                                def dockerUserPassword = "jcha1855()"
+                                sh "docker tag spaceship_pipeline_${var.toLowerCase()}:latest ${dockerUserId}/spaceship_pipeline_${var.toLowerCase()}:${BUILD_NUMBER}"
+                                sh "docker login -u ${dockerUserId} -p ${dockerUserPassword}"
+                                sh "docker push ${dockerUserId}/spaceship_pipeline_${var.toLowerCase()}:${BUILD_NUMBER}"
                             }
                         }
                     }

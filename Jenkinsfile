@@ -1,5 +1,5 @@
 
-nent = [
+def component = [
     Preprocess: false,
     Hyper: false,
     Train: false,

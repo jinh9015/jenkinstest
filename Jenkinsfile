@@ -21,6 +21,16 @@ podTemplate(label: 'docker-build',
         def dockerHubCred = 'jinh9015'
         def appImage
 
+        stage('Setup'){
+            container('git'){
+                sh 'apk add --no-cache git'  // Git 설치 명령어 추가
+            }
+            container('docker'){
+                sh 'service docker start'  // Docker 서비스 시작 명령어 추가
+                sh 'docker network create bridge'  // Docker 네트워크 생성 명령어 추가
+            }
+        }
+
         stage('Checkout'){
             container('git'){
                 checkout scm

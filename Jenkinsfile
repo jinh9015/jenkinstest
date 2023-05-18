@@ -1,54 +1,61 @@
-def component = [
-    Preprocess: false,
-    Hyper: false,
-    Train: false,
-    Test: false,
-    Bento: false
-]
-
-pipeline {
-    agent any
-
-    stages {
-        stage("Checkout") {
-            steps {
+podTemplate(label: 'docker-build', 
+  containers: [
+    containerTemplate(
+      name: 'git',
+      image: 'alpine/git',
+      command: 'cat',
+      ttyEnabled: true
+    ),
+    containerTemplate(
+      name: 'docker',
+      image: 'docker',
+      command: 'cat',
+      ttyEnabled: true
+    ),
+  ],
+  volumes: [ 
+    hostPathVolume(mountPath: '/var/run/docker.sock', hostPath: '/var/run/docker.sock'), 
+  ]
+) {
+    node('docker-build') {
+        def dockerHubCred = jinh9015
+        def appImage
+        
+        stage('Checkout'){
+            container('git'){
                 checkout scm
             }
         }
-
-        stage("Build") {
-            steps {
+        
+        stage('Build'){
+            container('docker'){
                 script {
-                    component.each { entry ->
-                        stage("${entry.key} Build") {
-                            if (entry.value) {
-                                def var = entry.key
-                                sh "docker-compose build ${var.toLowerCase()}"
-                            }
-                        }
+                    appImage = docker.build("/jinh9015/jenkinstest")
+                }
+            }
+        }
+        
+        stage('Test'){
+            container('docker'){
+                script {
+                    appImage.inside {
+                        sh 'npm install'
+                        sh 'npm test'
                     }
                 }
             }
         }
 
-        stage("Tag and Push") {
-            steps {
+        stage('Push'){
+            container('docker'){
                 script {
-                    component.each { entry ->
-                        stage("${entry.key} Push") {
-                            if (entry.value) {
-                                def var = entry.key
-                                def dockerUserId = "jinh9015"
-                                def dockerUserPassword = "jcha1855()"
-                                sh "docker tag ${var.toLowerCase()}:latest ${dockerUserId}/spaceship_pipeline_${var.toLowerCase()}:${BUILD_NUMBER}"
-                                sh "docker login -u ${dockerUserId} -p ${dockerUserPassword}"
-                                sh "docker push ${dockerUserId}/${var.toLowerCase()}:${BUILD_NUMBER}"
-                            }
-                        }
+                    docker.withRegistry('https://registry.hub.docker.com', dockerHubCred){
+                        appImage.push("${env.BUILD_NUMBER}")
+                        appImage.push("latest")
                     }
                 }
             }
         }
     }
+    
 }
-

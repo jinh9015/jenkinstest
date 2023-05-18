@@ -20,7 +20,7 @@ pipeline {
         stage("Tag and Push") {
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: 'jinh9015',
+                    credentialsId: 'DockerHub',
                     usernameVariable: 'DOCKER_USER_ID',
                     passwordVariable: 'DOCKER_USER_PASSWORD'
                 )]) {

@@ -1,68 +1,107 @@
-podTemplate(label: 'docker-build',
-  containers: [
-    containerTemplate(
-      name: 'git',
-      image: 'alpine/git',
-      command: 'cat',
-      ttyEnabled: true
-    ),
-    containerTemplate(
-      name: 'docker',
-      image: 'docker',
-      command: 'cat',
-      ttyEnabled: true
-    ),
-  ],
-  volumes: [
-    hostPathVolume(mountPath: '/var/run/docker.sock', hostPath: '/var/run/docker.sock'),
-  ]
-) {
-    node('docker-build') {
-        def dockerHubCred = 'jinh9015'
-        def appImage
+pipeline {
+    agent none
 
-        stage('Setup'){
-            container('git'){
-                sh 'apk add --no-cache git'  // Git 설치 명령어 추가
-            }
-            container('docker'){
-                sh 'dockerd --log-level debug &'  // Docker 서비스 시작 명령어 수정
-                sleep 10  // Docker가 완전히 시작될 때까지 잠시 대기
-                sh 'docker network create bridge'  // Docker 네트워크 생성 명령어 추가
-            }
-        }
-
-        stage('Checkout'){
-            container('git'){
-                checkout scm
-            }
-        }
-
-        stage('Build'){
-            container('docker'){
-                script {
-                    appImage = docker.build("jinh9015/jenkinstest")
+    stages {
+        stage('Run Docker Build') {
+            agent {
+                kubernetes {
+                    defaultContainer 'jnlp'
+                    yaml """
+                        apiVersion: v1
+                        kind: Pod
+                        metadata:
+                          labels:
+                            jenkins/jenkins-jenkins-agent: "true"
+                            jenkins/label: "docker-build"
+                          name: "docker-build-pod"
+                          namespace: "jenkins"
+                        spec:
+                          containers:
+                            - name: 'git'
+                              image: 'alpine/git'
+                              command: ['cat']
+                              tty: true
+                            - name: 'docker'
+                              image: 'docker'
+                              command: ['cat']
+                              tty: true
+                            - name: 'jnlp'
+                              image: 'jenkins/inbound-agent:4.11-1'
+                              args: ['$(JENKINS_URL)', '$(JENKINS_SECRET)', 'docker-build-pod']
+                              resources:
+                                requests:
+                                  cpu: '100m'
+                                  memory: '256Mi'
+                              volumeMounts:
+                                - mountPath: '/var/run/docker.sock'
+                                  name: 'docker-sock'
+                                - mountPath: '/home/jenkins/agent'
+                                  name: 'workspace-volume'
+                          volumes:
+                            - name: 'docker-sock'
+                              hostPath:
+                                path: '/var/run/docker.sock'
+                            - name: 'workspace-volume'
+                              emptyDir: {}
+                    """
                 }
             }
-        }
 
-        stage('Test'){
-            container('docker'){
-                script {
-                    appImage.inside {
-                        sh 'npm install'
-                        sh 'npm test'
+            stages {
+                stage('Setup') {
+                    steps {
+                        container('git') {
+                            sh 'apk add --no-cache git'
+                        }
+                        container('docker') {
+                            sh 'service docker start'
+                            sleep 10
+                            sh 'docker network create my-bridge-network'  // 네트워크 이름을 변경하여 생성
+                        }
                     }
                 }
-            }
-        }
 
-        stage('Push'){
-            container('docker'){
-                script {
-                    docker.withRegistry('https://registry.hub.docker.com', dockerHubCred){
-                        appImage.push("${env.BUILD_NUMBER}")
-                        appImage.push("latest")
+                stage('Checkout') {
+                    steps {
+                        container('git') {
+                            checkout scm
+                        }
+                    }
+                }
+
+                stage('Build') {
+                    steps {
+                        container('docker') {
+                            script {
+                                def appImage = docker.build("jinh9015/jenkinstest")
+                            }
+                        }
+                    }
+                }
+
+                stage('Test') {
+                    steps {
+                        container('docker') {
+                            script {
+                                appImage.inside {
+                                    sh 'npm install'
+                                    sh 'npm test'
+                                }
+                            }
+                        }
+                    }
+                }
+
+                stage('Push') {
+                    steps {
+                        container('docker') {
+                            script {
+                                docker.withRegistry('https://registry.hub.docker.com', dockerHubCred) {
+                                    appImage.push("${env.BUILD_NUMBER}")
+                                    appImage.push("latest")
+                                }
+                            }
+                        }
                     }
                 }
             }

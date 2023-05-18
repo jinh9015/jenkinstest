@@ -1,15 +1,13 @@
-def dockerHubRegistry = 'docker.io'  // Docker Hub Registry 정보
+def dockerHubRegistry = "docker.io"
 
 pipeline {
-    agent {
-        kubernetes {
-            label 'jenkins-worker'  // Jenkins worker label 설정
-        }
-    }
+    agent any
+
     environment {
         DOCKER_USER_ID = credentials('jinh9015').username
         DOCKER_USER_PASSWORD = credentials('jinh9015').password
     }
+
     stages {
         stage('Clone Repository') {
             steps {

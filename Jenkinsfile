@@ -30,7 +30,7 @@ podTemplate(label: 'docker-build',
         stage('Build'){
             container('docker'){
                 script {
-                    appImage = docker.build("/jinh9015/jenkinstest")
+                    appImage = docker.build("jinh9015/jenkinstest")
                 }
             }
         }

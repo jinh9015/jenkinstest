@@ -9,24 +9,31 @@ pipeline {
     }
 
     stages {
-        stage('Clone Repository') {
+        stage("Checkout") {
             steps {
-                checkout([$class: 'GitSCM',
-                          branches: [[name: '*/main']],
-                          userRemoteConfigs: [[url: 'https://github.com/jinh9015/jenkinstest.git']]])
+                checkout scm
             }
         }
-        
-        stage('Build and Push Docker Image') {
+
+        stage("Build") {
             steps {
-                dir('jenkinstest') {
-                    withCredentials([usernamePassword(credentialsId: 'jinh9015', usernameVariable: 'DOCKER_USER_ID', passwordVariable: 'DOCKER_USER_PASSWORD')]) {
-                        script {
-                            sh "docker login -u ${DOCKER_USER_ID} -p ${DOCKER_USER_PASSWORD} ${dockerHubRegistry}"
-                            sh "docker-compose -f docker-compose.yaml build"
-                            sh "docker tag jinh9015/jenkinstest:${env.BUILD_NUMBER} ${dockerHubRegistry}/jinh9015/jenkinstest:${env.BUILD_NUMBER}"
-                            sh "docker push ${dockerHubRegistry}/jinh9015/jenkinstest:${env.BUILD_NUMBER}"
-                        }
+                script {
+                    sh "docker build -t jinh9015/jenkinstest ."
+                }
+            }
+        }
+
+        stage("Tag and Push") {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'jinh9015',
+                    usernameVariable: 'DOCKER_USER_ID',
+                    passwordVariable: 'DOCKER_USER_PASSWORD'
+                )]) {
+                    script {
+                        sh "docker tag jinh9015/jenkinstest:latest ${DOCKER_USER_ID}/jenkinstest:${BUILD_NUMBER}"
+                        sh "docker login -u ${DOCKER_USER_ID} -p ${DOCKER_USER_PASSWORD}"
+                        sh "docker push ${DOCKER_USER_ID}/jenkinstest:${BUILD_NUMBER}"
                     }
                 }
             }

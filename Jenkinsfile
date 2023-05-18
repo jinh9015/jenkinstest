@@ -12,7 +12,7 @@ pipeline {
             steps {
                 script {
                     def imageName = "jinh9015/jenkinstest"
-                    def imageTag = env.BUILD_NUMBER
+                    def imageTag = "jenkinstest-${env.BUILD_NUMBER}" // 빌드 번호를 태그로 사용
 
                     // Docker Compose 실행을 위해 필요한 환경 변수 설정
                     env.IMAGE_NAME = "${imageName}:${imageTag}"

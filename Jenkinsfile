@@ -25,9 +25,11 @@ pipeline {
                     passwordVariable: 'DOCKER_USER_PASSWORD'
                 )]) {
                     script {
-                        sh "docker tag jinh9015/jenkinstest:latest ${env.DOCKER_USER_ID}/jenkinstest:${env.BUILD_NUMBER}"
-                        sh "docker login -u ${env.DOCKER_USER_ID} -p ${env.DOCKER_USER_PASSWORD}"
-                        sh "docker push ${env.DOCKER_USER_ID}/jenkinstest:${env.BUILD_NUMBER}"
+                        env.DOCKER_USER_ID = DOCKER_USER_ID
+                        env.DOCKER_USER_PASSWORD = DOCKER_USER_PASSWORD
+                        sh 'docker tag jinh9015/jenkinstest:latest $DOCKER_USER_ID/jenkinstest:$BUILD_NUMBER'
+                        sh 'docker login -u $DOCKER_USER_ID -p $DOCKER_USER_PASSWORD'
+                        sh 'docker push $DOCKER_USER_ID/jenkinstest:$BUILD_NUMBER'
                     }
                 }
             }

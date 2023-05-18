@@ -1,61 +1,34 @@
-podTemplate(label: 'docker-build', 
-  containers: [
-    containerTemplate(
-      name: 'git',
-      image: 'alpine/git',
-      command: 'cat',
-      ttyEnabled: true
-    ),
-    containerTemplate(
-      name: 'docker',
-      image: 'docker',
-      command: 'cat',
-      ttyEnabled: true
-    ),
-  ],
-  volumes: [ 
-    hostPathVolume(mountPath: '/var/run/docker.sock', hostPath: '/var/run/docker.sock'), 
-  ]
-) {
-    node('docker-build') {
-        def dockerHubCred = credentials('jinh9015')
-        def appImage
-        
-        stage('Checkout'){
-            container('git'){
-                checkout scm
-            }
-        }
-        
-        stage('Build'){
-            container('docker'){
-                script {
-                    appImage = docker.build("jinh9015/jenkinstest")
-                }
-            }
-        }
-        
-        stage('Test'){
-            container('docker'){
-                script {
-                    appImage.inside {
-                        sh 'npm install'
-                        sh 'npm test'
-                    }
-                }
-            }
-        }
+pipeline {
+    agent any
 
-        stage('Push'){
-            container('docker'){
+    stages {
+        stage('Clone repository') {
+            steps {
                 script {
-                    docker.withRegistry('https://registry.hub.docker.com', dockerHubCred){
-                        appImage.push("${env.BUILD_NUMBER}")
-                        appImage.push("latest")
+                    // GitHub repository 클론
+                    git url: 'https://github.com/jinh9015/jenkinstest.git'
+                }
+            }
+        }
+        
+        stage('Build and push Docker image') {
+            steps {
+                script {
+                    // 도커 이미지 빌드 및 푸시를 위한 변수 설정
+                    def dockerImageTag = "jinh9015/jenkinstest:${env.BUILD_NUMBER}"
+                    def dockerHubCredentials = 'jinh9015'
+                    
+                    // 도커 이미지 빌드
+                    docker.withRegistry('https://registry.hub.docker.com', dockerHubCredentials) {
+                        def dockerImage = docker.build(dockerImageTag, '.')
+                        dockerImage.push()
                     }
+                    
+                    // 빌드된 이미지 정보 출력
+                    echo "Docker image pushed: ${dockerImageTag}"
                 }
             }
         }
     }
-    
 }
+

@@ -1,10 +1,9 @@
-
 def component = [
-    Preprocess: false,
-    Hyper: false,
-    Train: false,
-    Test: false,
-    Bento: false
+    Preprocess: true,
+    Hyper: true,
+    Train: true,
+    Test: true,
+    Bento: true
 ]
 
 pipeline {
@@ -56,5 +55,4 @@ pipeline {
         }
     }
 }
-
 

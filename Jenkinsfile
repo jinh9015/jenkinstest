@@ -3,9 +3,6 @@ def dockerHubRegistry = "docker.io"
 pipeline {
     agent any
 
-    environment {
-        DOCKER_USER_ID = credentials('jinh9015').username
-        DOCKER_USER_PASSWORD = credentials('jinh9015').password
     }
 
     stages {

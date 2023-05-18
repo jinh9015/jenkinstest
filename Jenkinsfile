@@ -1,53 +1,33 @@
-def component = [
-    Preprocess: true,
-    Hyper: true,
-    Train: true,
-    Test: true,
-    Bento: true
-]
+def dockerHubRegistry = 'docker.io'  // Docker Hub Registry 정보
 
 pipeline {
-    agent any
-
+    agent {
+        kubernetes {
+            label 'jenkins-worker'  // Jenkins worker label 설정
+        }
+    }
+    environment {
+        DOCKER_USER_ID = credentials('jinh9015').username
+        DOCKER_USER_PASSWORD = credentials('jinh9015').password
+    }
     stages {
-        stage("Checkout") {
+        stage('Clone Repository') {
             steps {
-                checkout scm
+                checkout([$class: 'GitSCM',
+                          branches: [[name: '*/main']],
+                          userRemoteConfigs: [[url: 'https://github.com/jinh9015/jenkinstest.git']]])
             }
         }
-
-        stage("Build") {
+        
+        stage('Build and Push Docker Image') {
             steps {
-                script {
-                    component.each { entry ->
-                        stage("${entry.key} Build") {
-                            if (entry.value) {
-                                def var = entry.key
-                                sh "docker build -t spaceship_pipeline_${var.toLowerCase()}:${BUILD_NUMBER} ."
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        stage("Tag and Push") {
-            steps {
-                script {
-                    component.each { entry ->
-                        stage("${entry.key} Push") {
-                            if (entry.value) {
-                                def var = entry.key
-                                withCredentials([usernamePassword(
-                                    credentialsId: 'jinh9015',
-                                    usernameVariable: 'DOCKER_USER_ID',
-                                    passwordVariable: 'DOCKER_USER_PASSWORD'
-                                )]) {
-                                    sh "docker tag spaceship_pipeline_${var.toLowerCase()}:${BUILD_NUMBER} ${DOCKER_USER_ID}/spaceship_pipeline_${var.toLowerCase()}:${BUILD_NUMBER}"
-                                    sh "docker login -u ${DOCKER_USER_ID} -p ${DOCKER_USER_PASSWORD}"
-                                    sh "docker push ${DOCKER_USER_ID}/spaceship_pipeline_${var.toLowerCase()}:${BUILD_NUMBER}"
-                                }
-                            }
+                dir('jenkinstest') {
+                    withCredentials([usernamePassword(credentialsId: 'jinh9015', usernameVariable: 'DOCKER_USER_ID', passwordVariable: 'DOCKER_USER_PASSWORD')]) {
+                        script {
+                            sh "docker login -u ${DOCKER_USER_ID} -p ${DOCKER_USER_PASSWORD} ${dockerHubRegistry}"
+                            sh "docker-compose -f docker-compose.yaml build"
+                            sh "docker tag jinh9015/jenkinstest:${env.BUILD_NUMBER} ${dockerHubRegistry}/jinh9015/jenkinstest:${env.BUILD_NUMBER}"
+                            sh "docker push ${dockerHubRegistry}/jinh9015/jenkinstest:${env.BUILD_NUMBER}"
                         }
                     }
                 }

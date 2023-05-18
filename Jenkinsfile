@@ -26,7 +26,8 @@ podTemplate(label: 'docker-build',
                 sh 'apk add --no-cache git'  // Git 설치 명령어 추가
             }
             container('docker'){
-                sh 'service docker start'  // Docker 서비스 시작 명령어 추가
+                sh 'dockerd --log-level debug &'  // Docker 서비스 시작 명령어 수정
+                sleep 10  // Docker가 완전히 시작될 때까지 잠시 대기
                 sh 'docker network create bridge'  // Docker 네트워크 생성 명령어 추가
             }
         }

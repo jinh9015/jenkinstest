@@ -3,8 +3,6 @@ def dockerHubRegistry = "docker.io"
 pipeline {
     agent any
 
-    }
-
     stages {
         stage("Checkout") {
             steps {
@@ -29,7 +27,7 @@ pipeline {
                 )]) {
                     script {
                         sh "docker tag jinh9015/jenkinstest:latest ${DOCKER_USER_ID}/jenkinstest:${BUILD_NUMBER}"
-                        sh "docker login -u ${DOCKER_USER_ID} -p ${DOCKER_USER_PASSWORD}"
+                        sh "docker login -u ${DOCKER_USER_ID} -p ${DOCKER_USER_PASSWORD} ${dockerHubRegistry}"
                         sh "docker push ${DOCKER_USER_ID}/jenkinstest:${BUILD_NUMBER}"
                     }
                 }

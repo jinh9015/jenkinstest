@@ -8,19 +8,29 @@ pipeline {
             }
         }
 
-        stage("Build and Push") {
+        stage("Build") {
             steps {
                 script {
-                    def imageName = "jinh9015/jenkinstest"
-                    def imageTag = "jenkinstest-${env.BUILD_NUMBER}" // 빌드 번호를 태그로 사용
+                    // Docker 빌드 실행
+                    sh "docker build -t jinh9015/jenkinstest ."
+                }
+            }
+        }
 
-                    // Docker Compose 실행을 위해 필요한 환경 변수 설정
-                    env.IMAGE_NAME = "${imageName}:${imageTag}"
-                    env.COMPOSE_PROJECT_NAME = "jenkinstest"
-
-                    // Docker Compose를 사용하여 이미지 빌드 및 푸시
-                    sh "docker-compose -f docker-compose.yaml build"
-                    sh "docker-compose -f docker-compose.yaml push"
+        stage("Tag and Push") {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'DockerHub',
+                    usernameVariable: 'DOCKER_USER_ID',
+                    passwordVariable: 'DOCKER_USER_PASSWORD'
+                )]) {
+                    script {
+                        env.DOCKER_USER_ID = DOCKER_USER_ID
+                        env.DOCKER_USER_PASSWORD = DOCKER_USER_PASSWORD
+                        sh 'docker tag jinh9015/jenkinstest:latest $DOCKER_USER_ID/jenkinstest:$BUILD_NUMBER'
+                        sh 'docker login -u $DOCKER_USER_ID -p $DOCKER_USER_PASSWORD'
+                        sh 'docker push $DOCKER_USER_ID/jenkinstest:$BUILD_NUMBER'
+                    }
                 }
             }
         }

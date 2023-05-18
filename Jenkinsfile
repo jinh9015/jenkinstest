@@ -1,104 +1,52 @@
+
+def component = [
+    Preprocess: false,
+    Hyper: false,
+    Train: false,
+    Test: false,
+    Bento: false
+]
+
 pipeline {
-    agent none
+    agent any
 
     stages {
-        stage('Run Docker Build') {
-            agent {
-                kubernetes {
-                    defaultContainer 'jnlp'
-                    yaml """
-                        apiVersion: v1
-                        kind: Pod
-                        metadata:
-                          labels:
-                            jenkins/jenkins-jenkins-agent: "true"
-                            jenkins/label: "docker-build"
-                          name: "docker-build-pod"
-                          namespace: "jenkins"
-                        spec:
-                          containers:
-                            - name: 'git'
-                              image: 'alpine/git'
-                              command: ['cat']
-                              tty: true
-                            - name: 'docker'
-                              image: 'docker'
-                              command: ['cat']
-                              tty: true
-                            - name: 'jnlp'
-                              image: 'jenkins/inbound-agent:4.11-1'
-                              args: ['$(JENKINS_URL)', '$(JENKINS_SECRET)', 'docker-build-pod']
-                              resources:
-                                requests:
-                                  cpu: '100m'
-                                  memory: '256Mi'
-                              volumeMounts:
-                                - mountPath: '/var/run/docker.sock'
-                                  name: 'docker-sock'
-                                - mountPath: '/home/jenkins/agent'
-                                  name: 'workspace-volume'
-                          volumes:
-                            - name: 'docker-sock'
-                              hostPath:
-                                path: '/var/run/docker.sock'
-                            - name: 'workspace-volume'
-                              emptyDir: {}
-                    """
+        stage("Checkout") {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage("Build") {
+            steps {
+                script {
+                    component.each { entry ->
+                        stage("${entry.key} Build") {
+                            if (entry.value) {
+                                def var = entry.key
+                                sh "docker-compose build ${var.toLowerCase()}"
+                            }
+                        }
+                    }
                 }
             }
+        }
 
-            stages {
-                stage('Setup') {
-                    steps {
-                        container('git') {
-                            sh 'apk add --no-cache git'
-                        }
-                        container('docker') {
-                            sh 'service docker start'
-                            sleep 10
-                            sh 'docker network create my-bridge-network'  // 네트워크 이름을 변경하여 생성
-                        }
-                    }
-                }
-
-                stage('Checkout') {
-                    steps {
-                        container('git') {
-                            checkout scm
-                        }
-                    }
-                }
-
-                stage('Build') {
-                    steps {
-                        container('docker') {
-                            script {
-                                def appImage = docker.build("jinh9015/jenkinstest")
-                            }
-                        }
-                    }
-                }
-
-                stage('Test') {
-                    steps {
-                        container('docker') {
-                            script {
-                                appImage.inside {
-                                    sh 'npm install'
-                                    sh 'npm test'
-                                }
-                            }
-                        }
-                    }
-                }
-
-                stage('Push') {
-                    steps {
-                        container('docker') {
-                            script {
-                                docker.withRegistry('https://registry.hub.docker.com', dockerHubCred) {
-                                    appImage.push("${env.BUILD_NUMBER}")
-                                    appImage.push("latest")
+        stage("Tag and Push") {
+            steps {
+                script {
+                    component.each { entry ->
+                        stage("${entry.key} Push") {
+                            if (entry.value) {
+                                def var = entry.key
+                                withCredentials([usernamePassword(
+                                    credentialsId: 'jinh9015',
+                                    usernameVariable: 'DOCKER_USER_ID',
+                                    passwordVariable: 'DOCKER_USER_PASSWORD'
+                                )]) {
+                                    sh "docker tag spaceship_pipeline_${var.toLowerCase()}:latest ${DOCKER_USER_ID}/spaceship_pipeline_${var.toLowerCase()}:${BUILD_NUMBER}"
+                                    sh "docker login -u ${DOCKER_USER_ID} -p ${DOCKER_USER_PASSWORD}"
+                                    sh "docker push ${DOCKER_USER_ID}/spaceship_pipeline_${var.toLowerCase()}:${BUILD_NUMBER}"
                                 }
                             }
                         }
@@ -108,4 +56,5 @@ pipeline {
         }
     }
 }
+
 

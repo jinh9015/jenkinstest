@@ -2,22 +2,6 @@ pipeline {
     agent any
 
     stages {
-        stage("Checkout") {
-            steps {
-                script {
-                    def workspacePath = "${env.WORKSPACE}/k8s-manifest-repo"
-                    
-                    // k8s-manifest-repo 디렉토리가 이미 존재하는지 확인 후 삭제
-                    if (fileExists(workspacePath)) {
-                        sh "rm -rf ${workspacePath}"
-                    }
-                    
-                    // Git 레파지토리 클론
-                    git branch: 'main', url: 'https://github.com/jinh9015/k8s-manifest-repo.git'
-                }
-            }
-        }
-
         stage("Build") {
             steps {
                 script {
@@ -42,13 +26,18 @@ pipeline {
                         env.DOCKER_USER_ID = DOCKER_USER_ID
                         env.DOCKER_USER_PASSWORD = DOCKER_USER_PASSWORD
                         env.GITHUB_USERNAME = GITHUB_USERNAME
-
-                        sh 'docker tag jinh9015/jenkinstest:latest $DOCKER_USER_ID/jenkinstest:$BUILD_NUMBER'
-                        sh 'docker login -u $DOCKER_USER_ID -p $DOCKER_USER_PASSWORD'
-                        sh 'docker push $DOCKER_USER_ID/jenkinstest:$BUILD_NUMBER'
+                        
+                        // k8s-manifest-repo 디렉토리가 이미 존재하는지 확인 후 삭제
+                        def workspacePath = "${env.WORKSPACE}/k8s-manifest-repo"
+                        if (fileExists(workspacePath)) {
+                            sh "rm -rf ${workspacePath}"
+                        }
+                        
+                        // Git 레파지토리 클론
+                        git branch: 'main', url: 'https://github.com/jinh9015/k8s-manifest-repo.git'
                         
                         // deployment.yaml 템플릿 파일 로드
-                        def deploymentTemplatePath = "${env.WORKSPACE}/k8s-manifest-repo/deployment.yaml.template"
+                        def deploymentTemplatePath = "${workspacePath}/deployment.yaml.template"
                         def deploymentTemplate = readFile(deploymentTemplatePath)
                         
                         // 이미지 태그 동적으로 적용
@@ -56,14 +45,11 @@ pipeline {
                                                                      .replaceAll('\\$BUILD_NUMBER', BUILD_NUMBER)
                         
                         // 동적으로 생성한 deployment.yaml 파일 저장
-                        def deploymentYamlPath = "${env.WORKSPACE}/k8s-manifest-repo/deployment.yaml"
+                        def deploymentYamlPath = "${workspacePath}/deployment.yaml"
                         writeFile(file: deploymentYamlPath, text: updatedDeploymentYaml)
                         
-                        // 레파지토리 내 업데이트된 deployment.yaml 파일 복사
-                        sh "cp ${deploymentYamlPath} k8s-manifest-repo/deployment.yaml"
-                        
                         // 업데이트된 파일을 레파지토리에 커밋하고 푸시
-                        dir("${env.WORKSPACE}/k8s-manifest-repo") {
+                        dir(workspacePath) {
                             sh 'git add deployment.yaml'
                             sh 'git commit -m "Update deployment.yaml"'
                             sh 'git push origin main'

@@ -1,3 +1,5 @@
+
+# Jenkinsfile 예시
 pipeline {
     agent any
 
@@ -72,10 +74,10 @@ pipeline {
                     sh "git config --global user.name '${GITHUB_USERNAME}'"
                     sh "git config --global user.email '${GITHUB_USERNAME}@gmail.com'"
 
-                    // 레파지토리에 변경 사항을 커밋하고 푸시
+                    // k8s-manifest-repo 레파지토리에 변경 사항을 커밋하고 푸시
                     dir("${env.WORKSPACE}/k8s-manifest-repo") {
                         sh 'git add deployment.yaml'
-                        sh 'git commit -m "Update deployment.yaml"'
+                        sh 'git commit -m "Update deployment.yaml - ${BUILD_NUMBER}"'
                         sh 'git push origin main'
                     }
                 }
@@ -83,4 +85,3 @@ pipeline {
         }
     }
 }
-

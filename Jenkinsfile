@@ -4,7 +4,17 @@ pipeline {
     stages {
         stage("Checkout") {
             steps {
-                checkout scm
+                script {
+                    def workspacePath = "${env.WORKSPACE}/k8s-manifest-repo"
+                    
+                    // k8s-manifest-repo 디렉토리가 이미 존재하는지 확인 후 삭제
+                    if (fileExists(workspacePath)) {
+                        sh "rm -rf ${workspacePath}"
+                    }
+                    
+                    // Git 레파지토리 클론
+                    git branch: 'main', url: 'https://github.com/jinh9015/k8s-manifest-repo.git'
+                }
             }
         }
 
@@ -31,16 +41,11 @@ pipeline {
                     script {
                         env.DOCKER_USER_ID = DOCKER_USER_ID
                         env.DOCKER_USER_PASSWORD = DOCKER_USER_PASSWORD
-                        env.GITHUB_USERNAME = GITHUB_USERNAME // 추가된 부분
+                        env.GITHUB_USERNAME = GITHUB_USERNAME
 
                         sh 'docker tag jinh9015/jenkinstest:latest $DOCKER_USER_ID/jenkinstest:$BUILD_NUMBER'
                         sh 'docker login -u $DOCKER_USER_ID -p $DOCKER_USER_PASSWORD'
                         sh 'docker push $DOCKER_USER_ID/jenkinstest:$BUILD_NUMBER'
-                        
-                        // k8s-manifest-repo 레파지토리 클론
-                        sh 'git config user.name "${GITHUB_USERNAME}"'
-                        sh 'git config user.email "${GITHUB_USERNAME}@gmail.com"'
-                        sh 'git clone https://github.com/jinh9015/k8s-manifest-repo.git'
                         
                         // deployment.yaml 템플릿 파일 로드
                         def deploymentTemplatePath = "${env.WORKSPACE}/k8s-manifest-repo/deployment.yaml.template"

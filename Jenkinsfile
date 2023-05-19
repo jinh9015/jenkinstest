@@ -4,10 +4,7 @@ pipeline {
     stages {
         stage("Checkout") {
             steps {
-                script {
-                    // k8s-manifest-repo 레파지토리 클론
-                    sh 'git clone https://github.com/jinh9015/k8s-manifest-repo.git'
-                }
+                checkout scm
             }
         }
 
@@ -34,9 +31,16 @@ pipeline {
                     script {
                         env.DOCKER_USER_ID = DOCKER_USER_ID
                         env.DOCKER_USER_PASSWORD = DOCKER_USER_PASSWORD
+                        env.GITHUB_USERNAME = GITHUB_USERNAME // 추가된 부분
+
                         sh 'docker tag jinh9015/jenkinstest:latest $DOCKER_USER_ID/jenkinstest:$BUILD_NUMBER'
                         sh 'docker login -u $DOCKER_USER_ID -p $DOCKER_USER_PASSWORD'
                         sh 'docker push $DOCKER_USER_ID/jenkinstest:$BUILD_NUMBER'
+                        
+                        // k8s-manifest-repo 레파지토리 클론
+                        sh 'git config user.name "${GITHUB_USERNAME}"'
+                        sh 'git config user.email "${GITHUB_USERNAME}@gmail.com"'
+                        sh 'git clone https://github.com/jinh9015/k8s-manifest-repo.git'
                         
                         // deployment.yaml 템플릿 파일 로드
                         def deploymentTemplatePath = "${env.WORKSPACE}/k8s-manifest-repo/deployment.yaml.template"
@@ -50,10 +54,11 @@ pipeline {
                         def deploymentYamlPath = "${env.WORKSPACE}/k8s-manifest-repo/deployment.yaml"
                         writeFile(file: deploymentYamlPath, text: updatedDeploymentYaml)
                         
+                        // 레파지토리 내 업데이트된 deployment.yaml 파일 복사
+                        sh "cp ${deploymentYamlPath} k8s-manifest-repo/deployment.yaml"
+                        
                         // 업데이트된 파일을 레파지토리에 커밋하고 푸시
                         dir("${env.WORKSPACE}/k8s-manifest-repo") {
-                            sh 'git config user.name "${GITHUB_USERNAME}"'
-                            sh 'git config user.email "${GITHUB_USERNAME}@gmail.com"'
                             sh 'git add deployment.yaml'
                             sh 'git commit -m "Update deployment.yaml"'
                             sh 'git push origin main'

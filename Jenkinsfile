@@ -52,7 +52,7 @@ pipeline {
                     passwordVariable: 'GITHUB_TOKEN'
                 )]) {
                     // Git 레파지토리 클론
-                    sh "git clone -b main https://github.com/jinh9015/k8s-manifest-repo.git ${repoPath}"
+                    sh "git clone -b main https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/jinh9015/k8s-manifest-repo.git ${repoPath}"
 
                     // deployment.yaml 템플릿 파일 로드
                     def deploymentTemplatePath = "${env.WORKSPACE}/k8s-manifest-repo/deployment.yaml.template"

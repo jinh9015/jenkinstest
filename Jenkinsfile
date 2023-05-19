@@ -64,10 +64,12 @@ pipeline {
                 def deploymentYamlPath = "${env.WORKSPACE}/k8s-manifest-repo/deployment.yaml"
                 writeFile(file: deploymentYamlPath, text: updatedDeploymentYaml)
 
+                // Git 사용자 이름과 이메일 설정
+                sh "git config user.name '${env.GITHUB_USERNAME}'"
+                sh "git config user.email '${env.GITHUB_USERNAME}@gmail.com'"
+
                 // 레파지토리에 변경 사항을 커밋하고 푸시
                 dir("${env.WORKSPACE}/k8s-manifest-repo") {
-                    sh 'git config user.name "${GITHUB_USERNAME}"'
-                    sh 'git config user.email "${GITHUB_USERNAME}@gmail.com"'
                     sh 'git add deployment.yaml'
                     sh 'git commit -m "Update deployment.yaml"'
                     sh 'git push origin main'

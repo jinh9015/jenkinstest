@@ -1,5 +1,3 @@
-
-# Jenkinsfile 예시
 pipeline {
     agent any
 

@@ -67,6 +67,8 @@ pipeline {
                     writeFile(file: deploymentYamlPath, text: updatedDeploymentYaml)
 
                     // Git 사용자 이름과 이메일 설정
+                    sh "git config user.name '${GITHUB_USERNAME}'"
+                    sh "git config user.email '${GITHUB_USERNAME}@gmail.com'"
                     sh "git config --global user.name '${GITHUB_USERNAME}'"
                     sh "git config --global user.email '${GITHUB_USERNAME}@gmail.com'"
 

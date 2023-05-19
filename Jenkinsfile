@@ -23,6 +23,10 @@ pipeline {
                     credentialsId: 'DockerHub',
                     usernameVariable: 'DOCKER_USER_ID',
                     passwordVariable: 'DOCKER_USER_PASSWORD'
+                ), usernamePassword(
+                    credentialsId: 'github_token',
+                    usernameVariable: 'GITHUB_USERNAME',
+                    passwordVariable: 'GITHUB_TOKEN'
                 )]) {
                     script {
                         env.DOCKER_USER_ID = DOCKER_USER_ID
@@ -45,9 +49,11 @@ pipeline {
                         
                         // 레파지토리에 변경 사항을 커밋하고 푸시
                         dir("${env.WORKSPACE}/k8s-manifest-repo") {
+                            sh 'git config user.name "${GITHUB_USERNAME}"'
+                            sh 'git config user.email "${GITHUB_USERNAME}@gmail.com"'
                             sh 'git add deployment.yaml'
                             sh 'git commit -m "Update deployment.yaml"'
-                            sh 'git push'
+                            sh 'git push https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/jinh9015/k8s-manifest-repo.git'
                         }
                     }
                 }

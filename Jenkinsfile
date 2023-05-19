@@ -23,10 +23,6 @@ pipeline {
                     credentialsId: 'DockerHub',
                     usernameVariable: 'DOCKER_USER_ID',
                     passwordVariable: 'DOCKER_USER_PASSWORD'
-                ), usernamePassword(
-                    credentialsId: 'github_token',
-                    usernameVariable: 'GITHUB_USERNAME',
-                    passwordVariable: 'GITHUB_TOKEN'
                 )]) {
                     script {
                         env.DOCKER_USER_ID = DOCKER_USER_ID
@@ -49,30 +45,37 @@ pipeline {
                     sh "rm -rf ${repoPath}"
                 }
 
-                // Git 레파지토리 클론
-                sh "git clone -b main https://github.com/jinh9015/k8s-manifest-repo.git ${repoPath}"
+                // GitHub 토큰 가져오기
+                withCredentials([usernamePassword(
+                    credentialsId: 'github_token',
+                    usernameVariable: 'GITHUB_USERNAME',
+                    passwordVariable: 'GITHUB_TOKEN'
+                )]) {
+                    // Git 레파지토리 클론
+                    sh "git clone -b main https://github.com/jinh9015/k8s-manifest-repo.git ${repoPath}"
 
-                // deployment.yaml 템플릿 파일 로드
-                def deploymentTemplatePath = "${env.WORKSPACE}/k8s-manifest-repo/deployment.yaml.template"
-                def deploymentTemplate = readFile(deploymentTemplatePath)
+                    // deployment.yaml 템플릿 파일 로드
+                    def deploymentTemplatePath = "${env.WORKSPACE}/k8s-manifest-repo/deployment.yaml.template"
+                    def deploymentTemplate = readFile(deploymentTemplatePath)
 
-                // 이미지 태그 동적으로 적용
-                def updatedDeploymentYaml = deploymentTemplate.replaceAll('\\$DOCKER_USER_ID', DOCKER_USER_ID)
-                                                             .replaceAll('\\$BUILD_NUMBER', BUILD_NUMBER)
+                    // 이미지 태그 동적으로 적용
+                    def updatedDeploymentYaml = deploymentTemplate.replaceAll('\\$DOCKER_USER_ID', DOCKER_USER_ID)
+                                                                 .replaceAll('\\$BUILD_NUMBER', BUILD_NUMBER)
 
-                // 동적으로 생성한 deployment.yaml 파일 저장
-                def deploymentYamlPath = "${env.WORKSPACE}/k8s-manifest-repo/deployment.yaml"
-                writeFile(file: deploymentYamlPath, text: updatedDeploymentYaml)
+                    // 동적으로 생성한 deployment.yaml 파일 저장
+                    def deploymentYamlPath = "${env.WORKSPACE}/k8s-manifest-repo/deployment.yaml"
+                    writeFile(file: deploymentYamlPath, text: updatedDeploymentYaml)
 
-                // Git 사용자 이름과 이메일 설정
-                sh "git config user.name '${env.GITHUB_USERNAME}'"
-                sh "git config user.email '${env.GITHUB_USERNAME}@gmail.com'"
+                    // Git 사용자 이름과 이메일 설정
+                    sh "git config user.name '${GITHUB_USERNAME}'"
+                    sh "git config user.email '${GITHUB_USERNAME}@gmail.com'"
 
-                // 레파지토리에 변경 사항을 커밋하고 푸시
-                dir("${env.WORKSPACE}/k8s-manifest-repo") {
-                    sh 'git add deployment.yaml'
-                    sh 'git commit -m "Update deployment.yaml"'
-                    sh 'git push origin main'
+                    // 레파지토리에 변경 사항을 커밋하고 푸시
+                    dir("${env.WORKSPACE}/k8s-manifest-repo") {
+                        sh 'git add deployment.yaml'
+                        sh 'git commit -m "Update deployment.yaml"'
+                        sh 'git push origin main'
+                    }
                 }
             }
         }

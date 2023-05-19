@@ -4,11 +4,10 @@ pipeline {
     stages {
         stage("Checkout") {
             steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: '*/master']],
-                    userRemoteConfigs: [[url: 'https://github.com/jinh9015/k8s-manifest-repo.git']]
-                ])
+                script {
+                    // k8s-manifest-repo 레파지토리 클론
+                    sh 'git clone https://github.com/jinh9015/k8s-manifest-repo.git'
+                }
             }
         }
 
@@ -39,9 +38,6 @@ pipeline {
                         sh 'docker login -u $DOCKER_USER_ID -p $DOCKER_USER_PASSWORD'
                         sh 'docker push $DOCKER_USER_ID/jenkinstest:$BUILD_NUMBER'
                         
-                        // 레파지토리 클론
-                        sh "git clone https://github.com/jinh9015/k8s-manifest-repo.git"
-                        
                         // deployment.yaml 템플릿 파일 로드
                         def deploymentTemplatePath = "${env.WORKSPACE}/k8s-manifest-repo/deployment.yaml.template"
                         def deploymentTemplate = readFile(deploymentTemplatePath)
@@ -54,13 +50,13 @@ pipeline {
                         def deploymentYamlPath = "${env.WORKSPACE}/k8s-manifest-repo/deployment.yaml"
                         writeFile(file: deploymentYamlPath, text: updatedDeploymentYaml)
                         
-                        // 레파지토리에 변경 사항을 커밋하고 푸시
+                        // 업데이트된 파일을 레파지토리에 커밋하고 푸시
                         dir("${env.WORKSPACE}/k8s-manifest-repo") {
                             sh 'git config user.name "${GITHUB_USERNAME}"'
                             sh 'git config user.email "${GITHUB_USERNAME}@gmail.com"'
                             sh 'git add deployment.yaml'
                             sh 'git commit -m "Update deployment.yaml"'
-                            sh 'git push https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/jinh9015/k8s-manifest-repo.git'
+                            sh 'git push origin main'
                         }
                     }
                 }
